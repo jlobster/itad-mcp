@@ -165,24 +165,6 @@ function appendQueryParam(params, key, value) {
     if (value.length === 0) {
       return;
     }
-    for (const item of value) {
-      params.append(key, String(item));
-    }
-    return;
-  }
-
-  params.set(key, String(value));
-}
-
-function appendQueryParamCsv(params, key, value) {
-  if (value === undefined || value === null) {
-    return;
-  }
-
-  if (Array.isArray(value)) {
-    if (value.length === 0) {
-      return;
-    }
 
     params.set(key, value.join(","));
     return;
@@ -227,6 +209,10 @@ function ensureRequiredValues(tool, input) {
   if (BODY_REQUIRED_TOOLS.has(tool) && input.body === undefined) {
     throw new Error(`${tool} 需要 body`);
   }
+
+  if (tool === "games_info_v2" && Array.isArray(input.query.id)) {
+    throw new Error("games_info_v2 的 query.id 只支持单个字符串，不支持数组。请改为逐条调用。");
+  }
 }
 
 function applyAuth(endpoint, query, headers, oauthToken) {
@@ -264,16 +250,11 @@ async function itadRequest(path, options = {}) {
     query = {},
     body,
     headers = {},
-    queryArrayFormat = "csv",
   } = options;
   const params = new URLSearchParams();
 
   for (const [key, value] of Object.entries(query)) {
-    if (queryArrayFormat === "csv") {
-      appendQueryParamCsv(params, key, value);
-    } else {
-      appendQueryParam(params, key, value);
-    }
+    appendQueryParam(params, key, value);
   }
 
   const url = `${ITAD_BASE_URL}${path}${params.toString() ? `?${params.toString()}` : ""}`;
@@ -530,30 +511,12 @@ for (const endpoint of ENDPOINTS) {
         const finalHeaders = { ...headers };
         applyAuth(endpoint, finalQuery, finalHeaders, oauthToken);
         const finalPath = resolvePath(endpoint.path, pathParams);
-        const shouldTryBothArrayFormats =
-          endpoint.tool === "games_info_v2" && Array.isArray(finalQuery.id) && finalQuery.id.length > 1;
-        const formatsToTry = shouldTryBothArrayFormats ? ["repeat", "csv"] : ["csv"];
-        let data;
-        let lastError;
-
-        for (const queryArrayFormat of formatsToTry) {
-          try {
-            data = await itadRequest(finalPath, {
-              method: endpoint.method,
-              query: finalQuery,
-              headers: finalHeaders,
-              body,
-              queryArrayFormat,
-            });
-            break;
-          } catch (error) {
-            lastError = error;
-          }
-        }
-
-        if (data === undefined && lastError) {
-          throw lastError;
-        }
+        const data = await itadRequest(finalPath, {
+          method: endpoint.method,
+          query: finalQuery,
+          headers: finalHeaders,
+          body,
+        });
 
         return createTextResponse(data);
       } catch (error) {
