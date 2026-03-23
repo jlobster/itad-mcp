@@ -1,5 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { request as httpRequest } from "node:http";
+import { request as httpsRequest } from "node:https";
 import { z } from "zod";
 
 const ITAD_BASE_URL = "https://api.isthereanydeal.com";
@@ -255,14 +257,49 @@ async function itadRequest(path, options = {}) {
     method,
     headers: { ...headers },
   };
+  let bodyText;
 
   if (body !== undefined) {
+    bodyText = JSON.stringify(body);
     requestInit.headers["Content-Type"] = "application/json";
-    requestInit.body = JSON.stringify(body);
+    requestInit.headers["Content-Length"] = Buffer.byteLength(bodyText).toString();
+    requestInit.body = bodyText;
   }
+  let status;
+  let statusText;
+  let rawText;
 
-  const response = await fetch(url, requestInit);
-  const rawText = await response.text();
+  if ((method === "GET" || method === "HEAD") && bodyText !== undefined) {
+    // ITAD 内部接口 internal/exfgls/v1 在 OpenAPI 中定义为 GET + required body。
+    // WHATWG fetch 会直接拒绝此组合，这里改用 node:http(s) 原始请求保持兼容。
+    const requestFn = url.startsWith("https:") ? httpsRequest : httpRequest;
+    const rawResponse = await new Promise((resolve, reject) => {
+      const req = requestFn(url, { method, headers: requestInit.headers }, (res) => {
+        const chunks = [];
+        res.on("data", (chunk) => chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)));
+        res.on("end", () => {
+          resolve({
+            status: res.statusCode ?? 0,
+            statusText: res.statusMessage ?? "",
+            rawText: Buffer.concat(chunks).toString("utf8"),
+          });
+        });
+      });
+
+      req.on("error", reject);
+      req.write(bodyText);
+      req.end();
+    });
+
+    status = rawResponse.status;
+    statusText = rawResponse.statusText;
+    rawText = rawResponse.rawText;
+  } else {
+    const response = await fetch(url, requestInit);
+    status = response.status;
+    statusText = response.statusText;
+    rawText = await response.text();
+  }
 
   let parsed;
   try {
@@ -271,9 +308,9 @@ async function itadRequest(path, options = {}) {
     parsed = rawText;
   }
 
-  if (!response.ok) {
+  if (status < 200 || status >= 300) {
     throw new Error(
-      `ITAD API 请求失败 (${response.status} ${response.statusText}): ${typeof parsed === "string" ? parsed : JSON.stringify(parsed)}`
+      `ITAD API 请求失败 (${status} ${statusText}): ${typeof parsed === "string" ? parsed : JSON.stringify(parsed)}`
     );
   }
 
