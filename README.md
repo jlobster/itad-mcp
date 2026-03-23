@@ -23,6 +23,12 @@
 
 每个 tool 会按对应 endpoint 自动校验必填参数。
 
+### 调用说明
+
+已补充完整调用文档（含鉴权、返回格式、示例、每个 tool 的必填参数）：
+
+- [docs/CALLING_GUIDE.md](./docs/CALLING_GUIDE.md)
+
 ## 环境要求
 
 - Node.js 18+
