@@ -29,6 +29,11 @@
 
 - [docs/CALLING_GUIDE.md](./docs/CALLING_GUIDE.md)
 
+另外，为了让“只看 MCP 能力而看不到仓库文件”的 Agent 也能获取说明，服务额外暴露了两个 MCP Resource：
+
+- `itad://guide/calling`：Markdown 调用说明（人类可读）
+- `itad://endpoints/index.json`：53 个 tool 的机器可读元数据
+
 ## 环境要求
 
 - Node.js 18+

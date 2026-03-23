@@ -118,14 +118,6 @@ const BODY_REQUIRED_TOOLS = new Set([
 const primitiveValueSchema = z.union([z.string(), z.number(), z.boolean()]);
 const queryValueSchema = z.union([primitiveValueSchema, z.array(primitiveValueSchema)]);
 
-const endpointInputSchema = {
-  pathParams: z.record(z.string(), primitiveValueSchema).optional().describe("路径参数对象，只有带 {param} 的端点需要"),
-  query: z.record(z.string(), queryValueSchema).optional().describe("Query 参数对象"),
-  headers: z.record(z.string(), z.string()).optional().describe("请求头对象（如 ITAD-Profile）"),
-  body: z.any().optional().describe("请求体（对象或数组）"),
-  oauthToken: z.string().optional().describe("OAuth token；oauth 接口可传入，或使用环境变量"),
-};
-
 function getFirstEnv(names) {
   for (const envName of names) {
     const value = process.env[envName];
@@ -317,7 +309,105 @@ function buildToolDescription(endpoint) {
   }
 
   const requiredText = required.length ? `必填: ${required.join(" | ")}` : "无额外必填参数";
-  return `[${endpoint.method}] ${endpoint.path} - ${endpoint.summary}。${requiredText}。${authHint}。`;
+  return `[${endpoint.method}] ${endpoint.path} - ${endpoint.summary}。${requiredText}。${authHint}。可读取资源 itad://guide/calling 获取完整调用说明。`;
+}
+
+function buildNamedObjectSchema(requiredKeys, valueSchema, description) {
+  if (!requiredKeys.length) {
+    return z.record(z.string(), valueSchema).optional().describe(`${description}（可选）`);
+  }
+
+  const shape = {};
+  for (const key of requiredKeys) {
+    shape[key] = valueSchema;
+  }
+
+  return z
+    .object(shape)
+    .catchall(valueSchema)
+    .describe(`${description}，必填: ${requiredKeys.join(", ")}`);
+}
+
+function buildToolInputSchema(endpoint) {
+  const requiredPathParams = REQUIRED_PATH_PARAMS[endpoint.tool] ?? [];
+  const requiredQueryParams = REQUIRED_QUERY_PARAMS[endpoint.tool] ?? [];
+  const requiredHeaders = REQUIRED_HEADER_PARAMS[endpoint.tool] ?? [];
+
+  return {
+    pathParams: buildNamedObjectSchema(
+      requiredPathParams,
+      primitiveValueSchema,
+      "路径参数对象"
+    ),
+    query: buildNamedObjectSchema(requiredQueryParams, queryValueSchema, "Query 参数对象"),
+    headers: buildNamedObjectSchema(requiredHeaders, z.string(), "请求头对象"),
+    body: BODY_REQUIRED_TOOLS.has(endpoint.tool)
+      ? z.any().describe("请求体（此接口必填）")
+      : z.any().optional().describe("请求体（可选）"),
+    oauthToken:
+      endpoint.auth === "oauth"
+        ? z
+            .string()
+            .optional()
+            .describe(
+              `OAuth token（可选；如未传则读取环境变量 ${OAUTH_TOKEN_ENV_NAMES.join(", ")}）`
+            )
+        : z.string().optional().describe("OAuth token（非 oauth 接口可忽略）"),
+  };
+}
+
+function buildEndpointMetadata() {
+  return ENDPOINTS.map((endpoint) => ({
+    ...endpoint,
+    requiredPathParams: REQUIRED_PATH_PARAMS[endpoint.tool] ?? [],
+    requiredQueryParams: REQUIRED_QUERY_PARAMS[endpoint.tool] ?? [],
+    requiredHeaders: REQUIRED_HEADER_PARAMS[endpoint.tool] ?? [],
+    bodyRequired: BODY_REQUIRED_TOOLS.has(endpoint.tool),
+  }));
+}
+
+function buildCallingGuideMarkdown(metadata) {
+  const lines = [
+    "# IsThereAnyDeal MCP 调用说明",
+    "",
+    "该服务按 ITAD OpenAPI 一一映射 tool（53 个），不提供通用 API 调用工具。",
+    "",
+    "## 统一输入字段",
+    "- pathParams: 路径参数对象",
+    "- query: 查询参数对象",
+    "- headers: 请求头对象",
+    "- body: 请求体（部分接口必填）",
+    "- oauthToken: OAuth token（仅 oauth 接口）",
+    "",
+    "## 鉴权",
+    `- key: 自动使用环境变量 ${API_KEY_ENV_NAMES.join(", ")}`,
+    `- oauth: 使用 oauthToken 或环境变量 ${OAUTH_TOKEN_ENV_NAMES.join(", ")}`,
+    "- optional_key: 有 key 则自动附加",
+    "",
+    "## 端点清单",
+  ];
+
+  for (const endpoint of metadata) {
+    const required = [];
+    if (endpoint.requiredPathParams.length) {
+      required.push(`path:${endpoint.requiredPathParams.join(",")}`);
+    }
+    if (endpoint.requiredQueryParams.length) {
+      required.push(`query:${endpoint.requiredQueryParams.join(",")}`);
+    }
+    if (endpoint.requiredHeaders.length) {
+      required.push(`headers:${endpoint.requiredHeaders.join(",")}`);
+    }
+    if (endpoint.bodyRequired) {
+      required.push("body");
+    }
+
+    lines.push(
+      `- \`${endpoint.tool}\` -> ${endpoint.method} ${endpoint.path} | auth=${endpoint.auth} | required=${required.length ? required.join(" | ") : "-"}`
+    );
+  }
+
+  return lines.join("\n");
 }
 
 const server = new McpServer({
@@ -325,11 +415,52 @@ const server = new McpServer({
   version: "0.2.0",
 });
 
+const endpointMetadata = buildEndpointMetadata();
+const callingGuideMarkdown = buildCallingGuideMarkdown(endpointMetadata);
+
+server.registerResource(
+  "calling-guide",
+  "itad://guide/calling",
+  {
+    title: "ITAD MCP 调用说明",
+    description: "面向 Agent 的可调用信息（输入结构、鉴权、端点必填项）",
+    mimeType: "text/markdown",
+  },
+  async () => ({
+    contents: [
+      {
+        uri: "itad://guide/calling",
+        mimeType: "text/markdown",
+        text: callingGuideMarkdown,
+      },
+    ],
+  })
+);
+
+server.registerResource(
+  "endpoint-index",
+  "itad://endpoints/index.json",
+  {
+    title: "ITAD MCP 端点索引",
+    description: "53 个 MCP tools 的机器可读元数据",
+    mimeType: "application/json",
+  },
+  async () => ({
+    contents: [
+      {
+        uri: "itad://endpoints/index.json",
+        mimeType: "application/json",
+        text: JSON.stringify(endpointMetadata, null, 2),
+      },
+    ],
+  })
+);
+
 for (const endpoint of ENDPOINTS) {
   server.tool(
     endpoint.tool,
     buildToolDescription(endpoint),
-    endpointInputSchema,
+    buildToolInputSchema(endpoint),
     async ({ pathParams = {}, query = {}, headers = {}, body, oauthToken }) => {
       try {
         ensureRequiredValues(endpoint.tool, { pathParams, query, headers, body });
