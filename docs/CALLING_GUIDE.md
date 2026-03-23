@@ -161,6 +161,26 @@ endpoint: `GET /user/info/v2`
 }
 ```
 
+### 4.6 查询游戏信息（`games_info_v2` 批量 id）
+
+tool: `games_info_v2`  
+endpoint: `GET /games/info/v2`  
+鉴权：`key`  
+必填：`query.id`
+
+```json
+{
+  "query": {
+    "id": [
+      "01849783-6a26-7147-ab32-71804ca47e8e",
+      "01849782-1017-7389-8de4-c97c587fd7e3"
+    ]
+  }
+}
+```
+
+> 兼容性说明：MCP 对该端点会优先使用 `id=a&id=b` 形式；若上游仍异常，会自动回退到 `id=a,b` 形式再试一次。
+
 ---
 
 ## 5. 全量工具分组与必填参数
