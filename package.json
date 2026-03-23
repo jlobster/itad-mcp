@@ -4,6 +4,9 @@
   "description": "MCP server for IsThereAnyDeal API",
   "type": "module",
   "main": "src/index.js",
+  "bin": {
+    "isthereanydeal-mcp": "./src/index.js"
+  },
   "scripts": {
     "start": "node src/index.js",
     "check": "node --check src/index.js"
