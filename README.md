@@ -45,26 +45,41 @@ The server also exposes two MCP Resources so agents that can't read repository f
 npm install
 ```
 
-## API Key Configuration (Environment Variables)
+## Credentials
 
-Key-auth endpoints require one of the following environment variables:
+### API Key (price/deal endpoints)
 
-- `ITAD_API_KEY` (recommended)
-- `ISTHEREANYDEAL_API_KEY`
-- `APIKEY`
-- `apikey`
+Most read-only endpoints (prices, deals, search, game info) require an API key.
 
-Example:
+Get one at <https://isthereanydeal.com/apps/my/> — create an app and copy the key.
+
+### OAuth Token (account endpoints)
+
+Endpoints that access your account — waitlist, collection, notes, notifications — require an OAuth token. The flow:
+
+1. Go to <https://isthereanydeal.com/apps/my/> and create an app (or use the same one).
+2. Set the redirect URI to something you control (e.g. `http://localhost`).
+3. Send users (or yourself) to the ITAD authorization URL:
+   ```
+   https://isthereanydeal.com/oauth/authorize/?client_id=YOUR_CLIENT_ID&response_type=token&scope=waitlist_read+waitlist_write+collection_read+collection_write+notes_read+notes_write&redirect_uri=YOUR_REDIRECT_URI
+   ```
+4. After authorizing, ITAD redirects to your URI with `#access_token=...` in the URL fragment. Copy that token.
+
+### Setting credentials via .env
+
+Copy `.env.example` to `.env` and fill in your values:
 
 ```bash
-export ITAD_API_KEY="your_isthereanydeal_api_key"
+cp .env.example .env
 ```
 
-For OAuth endpoints:
-
-```bash
-export ITAD_OAUTH_TOKEN="your_oauth_token"
+`.env`:
 ```
+ITAD_API_KEY=your_isthereanydeal_api_key
+ITAD_OAUTH_TOKEN=your_oauth_token
+```
+
+The server reads these at startup. `ITAD_OAUTH_TOKEN` is only needed if you use account endpoints.
 
 ## Starting the Server
 
@@ -83,12 +98,15 @@ The server communicates with MCP clients over stdio.
       "command": "node",
       "args": ["/path/to/isthereanydeal-mcp/src/index.js"],
       "env": {
-        "ITAD_API_KEY": "your_api_key"
+        "ITAD_API_KEY": "your_api_key",
+        "ITAD_OAUTH_TOKEN": "your_oauth_token"
       }
     }
   }
 }
 ```
+
+`ITAD_OAUTH_TOKEN` is only required for account endpoints (waitlist, collection, notes, notifications). Omit it if you only need price and deal data.
 
 ## Full Tool List (53 tools)
 
