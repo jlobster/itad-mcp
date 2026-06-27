@@ -1,3 +1,7 @@
 node_modules/
 .env
 npm-debug.log*
+
+# Claude artifacts
+CLAUDE.md
+.claude/
