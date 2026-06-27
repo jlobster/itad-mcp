@@ -6,7 +6,7 @@ An MCP (Model Context Protocol) server for the IsThereAnyDeal API.
 
 - No generic "call any API" tool
 - **Each ITAD API operation maps to a dedicated MCP tool**
-- Full coverage of all 53 operations in the official OpenAPI spec
+- Full coverage of all 63 operations in the official OpenAPI spec
 - API key is passed via environment variable
 
 ## Features
@@ -32,7 +32,7 @@ Full calling documentation (auth, response format, examples, required params per
 The server also exposes two MCP Resources so agents that can't read repository files still have access to calling information:
 
 - `itad://guide/calling`: Markdown calling guide (human-readable)
-- `itad://endpoints/index.json`: Machine-readable metadata for all 53 tools
+- `itad://endpoints/index.json`: Machine-readable metadata for all 63 tools
 
 ## Requirements
 
@@ -128,8 +128,9 @@ The server communicates with MCP clients over stdio.
 
 The server loads credentials from the `.env` file in the project root automatically — no `env` block needed. If you prefer to set credentials as OS-level user environment variables instead of a `.env` file, those work too and take precedence.
 
-## Full Tool List (53 tools)
+## Full Tool List (63 tools)
 
+- `bundles_v1` -> GET /bundles/v1
 - `collection_copies_v1_delete` -> DELETE /collection/copies/v1
 - `collection_copies_v1_get` -> GET /collection/copies/v1
 - `collection_copies_v1_patch` -> PATCH /collection/copies/v1
@@ -141,6 +142,7 @@ The server loads credentials from the `.env` file in the project root automatica
 - `collection_groups_v1_get` -> GET /collection/groups/v1
 - `collection_groups_v1_patch` -> PATCH /collection/groups/v1
 - `collection_groups_v1_post` -> POST /collection/groups/v1
+- `deals_post_v2` -> POST /deals/v2
 - `deals_v2` -> GET /deals/v2
 - `games_bundles_v2` -> GET /games/bundles/v2
 - `games_history_v2` -> GET /games/history/v2
@@ -152,6 +154,9 @@ The server loads credentials from the `.env` file in the project root automatica
 - `games_search_v1` -> GET /games/search/v1
 - `games_storelow_v2` -> POST /games/storelow/v2
 - `games_subscriptions_v1` -> POST /games/subs/v1
+- `ignored_games_v1_delete` -> DELETE /ignored/games/v1
+- `ignored_games_v1_get` -> GET /ignored/games/v1
+- `ignored_games_v1_put` -> PUT /ignored/games/v1
 - `internal_earlyaccess_v1` -> GET /internal/early-access/v1
 - `internal_exfgls_v1` -> GET /internal/exfgls/v1
 - `internal_hltb_v1` -> GET /internal/hltb/v1
@@ -171,11 +176,14 @@ The server loads credentials from the `.env` file in the project root automatica
 - `profiles_link_v1_put` -> PUT /profiles/link/v1
 - `profiles_sync_collection_v1_put` -> PUT /profiles/sync/collection/v1
 - `profiles_sync_waitlist_v1_put` -> PUT /profiles/sync/waitlist/v1
+- `service_shops_map_v1` -> GET /service/shops/map/v1
 - `service_shops_v1` -> GET /service/shops/v1
 - `stats_most_collected_v1` -> GET /stats/most-collected/v1
 - `stats_most_popular_v1` -> GET /stats/most-popular/v1
 - `stats_most_waitlisted_v1` -> GET /stats/most-waitlisted/v1
 - `stats_waitlist_v1` -> GET /stats/waitlist/v1
+- `unstable_games_dots_v1` -> GET /unstable/games/dots/v1
+- `unstable_games_list_v1` -> GET /unstable/games/list/v1
 - `user_info_v2` -> GET /user/info/v2
 - `user_notes_v1_delete` -> DELETE /user/notes/v1
 - `user_notes_v1_get` -> GET /user/notes/v1
@@ -183,3 +191,5 @@ The server loads credentials from the `.env` file in the project root automatica
 - `waitlist_games_v1_delete` -> DELETE /waitlist/games/v1
 - `waitlist_games_v1_get` -> GET /waitlist/games/v1
 - `waitlist_games_v1_put` -> PUT /waitlist/games/v1
+- `webhooks_add_v1` -> PUT /webhooks/v1
+- `webhooks_delete_v1` -> DELETE /webhooks/v1
