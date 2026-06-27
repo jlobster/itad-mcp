@@ -176,7 +176,7 @@ function appendQueryParam(params, key, value) {
 function resolvePath(template, pathParams) {
   return template.replace(/\{([^}]+)\}/g, (_, key) => {
     if (pathParams[key] === undefined || pathParams[key] === null) {
-      throw new Error(`缺少路径参数: ${key}`);
+      throw new Error(`Missing path parameter: ${key}`);
     }
 
     return encodeURIComponent(String(pathParams[key]));
@@ -190,28 +190,28 @@ function ensureRequiredValues(tool, input) {
 
   for (const key of requiredPathParams) {
     if (input.pathParams[key] === undefined || input.pathParams[key] === null) {
-      throw new Error(`${tool} 缺少必填 path 参数: ${key}`);
+      throw new Error(`${tool} is missing required path parameter: ${key}`);
     }
   }
 
   for (const key of requiredQueryParams) {
     if (input.query[key] === undefined || input.query[key] === null) {
-      throw new Error(`${tool} 缺少必填 query 参数: ${key}`);
+      throw new Error(`${tool} is missing required query parameter: ${key}`);
     }
   }
 
   for (const key of requiredHeaders) {
     if (!input.headers[key]) {
-      throw new Error(`${tool} 缺少必填 header: ${key}`);
+      throw new Error(`${tool} is missing required header: ${key}`);
     }
   }
 
   if (BODY_REQUIRED_TOOLS.has(tool) && input.body === undefined) {
-    throw new Error(`${tool} 需要 body`);
+    throw new Error(`${tool} requires a request body`);
   }
 
   if (tool === "games_info_v2" && Array.isArray(input.query.id)) {
-    throw new Error("games_info_v2 的 query.id 只支持单个字符串，不支持数组。请改为逐条调用。");
+    throw new Error("games_info_v2 query.id only supports a single string, not an array. Call it once per ID.");
   }
 }
 
@@ -220,7 +220,7 @@ function applyAuth(endpoint, query, headers, oauthToken) {
 
   if (endpoint.auth === "key") {
     if (!apiKey) {
-      throw new Error(`接口 ${endpoint.tool} 需要 API Key，请设置环境变量: ${API_KEY_ENV_NAMES.join(", ")}`);
+      throw new Error(`Tool ${endpoint.tool} requires an API Key. Set one of these environment variables: ${API_KEY_ENV_NAMES.join(", ")}`);
     }
 
     query.key = apiKey;
@@ -237,7 +237,7 @@ function applyAuth(endpoint, query, headers, oauthToken) {
   if (endpoint.auth === "oauth") {
     const token = oauthToken?.trim() || getFirstEnv(OAUTH_TOKEN_ENV_NAMES);
     if (!token) {
-      throw new Error(`接口 ${endpoint.tool} 需要 OAuth Token。请传入 oauthToken 或设置环境变量: ${OAUTH_TOKEN_ENV_NAMES.join(", ")}`);
+      throw new Error(`Tool ${endpoint.tool} requires an OAuth Token. Pass oauthToken or set one of these environment variables: ${OAUTH_TOKEN_ENV_NAMES.join(", ")}`);
     }
 
     headers.Authorization = `Bearer ${token}`;
@@ -275,8 +275,8 @@ async function itadRequest(path, options = {}) {
   let rawText;
 
   if ((method === "GET" || method === "HEAD") && bodyText !== undefined) {
-    // ITAD 内部接口 internal/exfgls/v1 在 OpenAPI 中定义为 GET + required body。
-    // WHATWG fetch 会直接拒绝此组合，这里改用 node:http(s) 原始请求保持兼容。
+    // The ITAD internal endpoint internal/exfgls/v1 is defined in the OpenAPI spec as GET with a required body.
+    // WHATWG fetch rejects this combination, so we fall back to raw node:http(s) requests for compatibility.
     const requestFn = url.startsWith("https:") ? httpsRequest : httpRequest;
     const rawResponse = await new Promise((resolve, reject) => {
       const req = requestFn(url, { method, headers: requestInit.headers }, (res) => {
@@ -315,7 +315,7 @@ async function itadRequest(path, options = {}) {
 
   if (status < 200 || status >= 300) {
     throw new Error(
-      `ITAD API 请求失败 (${status} ${statusText}): ${typeof parsed === "string" ? parsed : JSON.stringify(parsed)}`
+      `ITAD API request failed (${status} ${statusText}): ${typeof parsed === "string" ? parsed : JSON.stringify(parsed)}`
     );
   }
 
@@ -341,22 +341,22 @@ function buildToolDescription(endpoint) {
     required.push("body");
   }
 
-  let authHint = "无需鉴权";
+  let authHint = "No auth required";
   if (endpoint.auth === "key") {
-    authHint = `需要 API Key（环境变量: ${API_KEY_ENV_NAMES.join(", ")}）`;
+    authHint = `Requires API Key (env: ${API_KEY_ENV_NAMES.join(", ")})`;
   } else if (endpoint.auth === "optional_key") {
-    authHint = `可选 API Key（环境变量: ${API_KEY_ENV_NAMES.join(", ")}）`;
+    authHint = `Optional API Key (env: ${API_KEY_ENV_NAMES.join(", ")})`;
   } else if (endpoint.auth === "oauth") {
-    authHint = `需要 OAuth Token（oauthToken 或环境变量: ${OAUTH_TOKEN_ENV_NAMES.join(", ")}）`;
+    authHint = `Requires OAuth Token (oauthToken param or env: ${OAUTH_TOKEN_ENV_NAMES.join(", ")})`;
   }
 
-  const requiredText = required.length ? `必填: ${required.join(" | ")}` : "无额外必填参数";
-  return `[${endpoint.method}] ${endpoint.path} - ${endpoint.summary}。${requiredText}。${authHint}。可读取资源 itad://guide/calling 获取完整调用说明。`;
+  const requiredText = required.length ? `Required: ${required.join(" | ")}` : "No additional required parameters";
+  return `[${endpoint.method}] ${endpoint.path} - ${endpoint.summary}. ${requiredText}. ${authHint}. Read the itad://guide/calling resource for full usage documentation.`;
 }
 
 function buildNamedObjectSchema(requiredKeys, valueSchema, description) {
   if (!requiredKeys.length) {
-    return z.record(z.string(), valueSchema).optional().describe(`${description}（可选）`);
+    return z.record(z.string(), valueSchema).optional().describe(`${description} (optional)`);
   }
 
   const shape = {};
@@ -367,7 +367,7 @@ function buildNamedObjectSchema(requiredKeys, valueSchema, description) {
   return z
     .object(shape)
     .catchall(valueSchema)
-    .describe(`${description}，必填: ${requiredKeys.join(", ")}`);
+    .describe(`${description}, required: ${requiredKeys.join(", ")}`);
 }
 
 function buildToolInputSchema(endpoint) {
@@ -379,22 +379,22 @@ function buildToolInputSchema(endpoint) {
     pathParams: buildNamedObjectSchema(
       requiredPathParams,
       primitiveValueSchema,
-      "路径参数对象"
+      "Path parameters"
     ),
-    query: buildNamedObjectSchema(requiredQueryParams, queryValueSchema, "Query 参数对象"),
-    headers: buildNamedObjectSchema(requiredHeaders, z.string(), "请求头对象"),
+    query: buildNamedObjectSchema(requiredQueryParams, queryValueSchema, "Query parameters"),
+    headers: buildNamedObjectSchema(requiredHeaders, z.string(), "Request headers"),
     body: BODY_REQUIRED_TOOLS.has(endpoint.tool)
-      ? z.any().describe("请求体（此接口必填）")
-      : z.any().optional().describe("请求体（可选）"),
+      ? z.any().describe("Request body (required for this endpoint)")
+      : z.any().optional().describe("Request body (optional)"),
     oauthToken:
       endpoint.auth === "oauth"
         ? z
             .string()
             .optional()
             .describe(
-              `OAuth token（可选；如未传则读取环境变量 ${OAUTH_TOKEN_ENV_NAMES.join(", ")}）`
+              `OAuth token (optional; falls back to env vars ${OAUTH_TOKEN_ENV_NAMES.join(", ")})`
             )
-        : z.string().optional().describe("OAuth token（非 oauth 接口可忽略）"),
+        : z.string().optional().describe("OAuth token (ignored for non-OAuth endpoints)"),
   };
 }
 
@@ -410,23 +410,23 @@ function buildEndpointMetadata() {
 
 function buildCallingGuideMarkdown(metadata) {
   const lines = [
-    "# IsThereAnyDeal MCP 调用说明",
+    "# IsThereAnyDeal MCP Calling Guide",
     "",
-    "该服务按 ITAD OpenAPI 一一映射 tool（53 个），不提供通用 API 调用工具。",
+    "This server maps each ITAD OpenAPI operation to a dedicated MCP tool (53 total). No generic API call tool is provided.",
     "",
-    "## 统一输入字段",
-    "- pathParams: 路径参数对象",
-    "- query: 查询参数对象",
-    "- headers: 请求头对象",
-    "- body: 请求体（部分接口必填）",
-    "- oauthToken: OAuth token（仅 oauth 接口）",
+    "## Unified Input Fields",
+    "- pathParams: path parameter object",
+    "- query: query parameter object",
+    "- headers: request headers object",
+    "- body: request body (required for some endpoints)",
+    "- oauthToken: OAuth token (OAuth endpoints only)",
     "",
-    "## 鉴权",
-    `- key: 自动使用环境变量 ${API_KEY_ENV_NAMES.join(", ")}`,
-    `- oauth: 使用 oauthToken 或环境变量 ${OAUTH_TOKEN_ENV_NAMES.join(", ")}`,
-    "- optional_key: 有 key 则自动附加",
+    "## Authentication",
+    `- key: API key injected automatically from env vars ${API_KEY_ENV_NAMES.join(", ")}`,
+    `- oauth: uses oauthToken param or env vars ${OAUTH_TOKEN_ENV_NAMES.join(", ")}`,
+    "- optional_key: API key injected if present",
     "",
-    "## 端点清单",
+    "## Endpoint List",
   ];
 
   for (const endpoint of metadata) {
@@ -464,8 +464,8 @@ server.registerResource(
   "calling-guide",
   "itad://guide/calling",
   {
-    title: "ITAD MCP 调用说明",
-    description: "面向 Agent 的可调用信息（输入结构、鉴权、端点必填项）",
+    title: "ITAD MCP Calling Guide",
+    description: "Agent-facing calling reference (input structure, auth, required params per endpoint)",
     mimeType: "text/markdown",
   },
   async () => ({
@@ -483,8 +483,8 @@ server.registerResource(
   "endpoint-index",
   "itad://endpoints/index.json",
   {
-    title: "ITAD MCP 端点索引",
-    description: "53 个 MCP tools 的机器可读元数据",
+    title: "ITAD MCP Endpoint Index",
+    description: "Machine-readable metadata for all 53 MCP tools",
     mimeType: "application/json",
   },
   async () => ({
@@ -532,6 +532,6 @@ async function start() {
 }
 
 start().catch((error) => {
-  console.error("MCP 服务启动失败:", error);
+  console.error("Failed to start MCP server:", error);
   process.exit(1);
 });

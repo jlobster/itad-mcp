@@ -1,80 +1,80 @@
 # isthereanydeal-mcp
 
-基于 IsThereAnyDeal API 的 MCP（Model Context Protocol）服务。
+An MCP (Model Context Protocol) server for the IsThereAnyDeal API.
 
-## 设计原则
+## Design Principles
 
-- 不提供任何“通用 API 调用”工具
-- **每个 ITAD API operation 对应一个独立 MCP tool**
-- 当前对官方 OpenAPI 的 53 个 operation 全量覆盖
-- `apikey` 通过环境变量传入
+- No generic "call any API" tool
+- **Each ITAD API operation maps to a dedicated MCP tool**
+- Full coverage of all 53 operations in the official OpenAPI spec
+- API key is passed via environment variable
 
-## 功能
+## Features
 
-### 输入结构（所有 tool 统一）
+### Input Structure (All Tools)
 
-每个 tool 都使用以下输入字段（按接口需要填写）：
+Every tool uses the following input fields (populate only what the endpoint requires):
 
-- `pathParams`: 路径参数对象（例如 `{ "shopId": 61 }`）
-- `query`: query 参数对象（例如 `{ "id": "uuid", "country": "US" }`）
-- `headers`: 请求头对象（例如 `{ "ITAD-Profile": "xxx" }`）
-- `body`: 请求体（对象或数组）
-- `oauthToken`: OAuth token（仅 oauth 接口可用，可选）
+- `pathParams`: Path parameter object (e.g. `{ "shopId": 61 }`)
+- `query`: Query parameter object (e.g. `{ "id": "uuid", "country": "US" }`)
+- `headers`: Request headers object (e.g. `{ "ITAD-Profile": "xxx" }`)
+- `body`: Request body (object or array)
+- `oauthToken`: OAuth token (OAuth endpoints only, optional)
 
-每个 tool 会按对应 endpoint 自动校验必填参数。
+Each tool validates required parameters automatically for its corresponding endpoint.
 
-### 调用说明
+### Documentation
 
-已补充完整调用文档（含鉴权、返回格式、示例、每个 tool 的必填参数）：
+Full calling documentation (auth, response format, examples, required params per tool):
 
 - [docs/CALLING_GUIDE.md](./docs/CALLING_GUIDE.md)
 
-另外，为了让“只看 MCP 能力而看不到仓库文件”的 Agent 也能获取说明，服务额外暴露了两个 MCP Resource：
+The server also exposes two MCP Resources so agents that can't read repository files still have access to calling information:
 
-- `itad://guide/calling`：Markdown 调用说明（人类可读）
-- `itad://endpoints/index.json`：53 个 tool 的机器可读元数据
+- `itad://guide/calling`: Markdown calling guide (human-readable)
+- `itad://endpoints/index.json`: Machine-readable metadata for all 53 tools
 
-## 环境要求
+## Requirements
 
 - Node.js 18+
-- IsThereAnyDeal API Key（在 <https://isthereanydeal.com/apps/my/> 申请）
+- IsThereAnyDeal API Key (register at <https://isthereanydeal.com/apps/my/>)
 
-## 安装
+## Installation
 
 ```bash
 npm install
 ```
 
-## 配置 API Key（环境变量）
+## API Key Configuration (Environment Variables)
 
-Key 鉴权接口需要设置以下任意一个环境变量：
+Key-auth endpoints require one of the following environment variables:
 
-- `ITAD_API_KEY`（推荐）
+- `ITAD_API_KEY` (recommended)
 - `ISTHEREANYDEAL_API_KEY`
 - `APIKEY`
 - `apikey`
 
-例如：
+Example:
 
 ```bash
-export ITAD_API_KEY="你的_isthereanydeal_api_key"
+export ITAD_API_KEY="your_isthereanydeal_api_key"
 ```
 
-OAuth 接口可使用：
+For OAuth endpoints:
 
 ```bash
-export ITAD_OAUTH_TOKEN="你的_oauth_token"
+export ITAD_OAUTH_TOKEN="your_oauth_token"
 ```
 
-## 启动
+## Starting the Server
 
 ```bash
 npm start
 ```
 
-服务使用 stdio 方式与 MCP Client 通信。
+The server communicates with MCP clients over stdio.
 
-## 在 MCP Client 中配置示例
+## MCP Client Configuration Example
 
 ```json
 {
@@ -90,7 +90,7 @@ npm start
 }
 ```
 
-## 全量工具清单（53 个）
+## Full Tool List (53 tools)
 
 - `collection_copies_v1_delete` -> DELETE /collection/copies/v1
 - `collection_copies_v1_get` -> GET /collection/copies/v1

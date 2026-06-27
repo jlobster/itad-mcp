@@ -1,10 +1,10 @@
-# MCP 调用指南（IsThereAnyDeal）
+# MCP Calling Guide (IsThereAnyDeal)
 
-本文档补充“如何调用 tool”的实操信息，适用于本仓库中 **53 个 API 对应 tool**。
+This document covers practical calling information for the **53 API tools** in this repository.
 
-## 1. 调用输入结构（统一）
+## 1. Input Structure (All Tools)
 
-所有 tool 的输入 schema 统一为：
+All tools share the same input schema:
 
 ```json
 {
@@ -16,72 +16,72 @@
 }
 ```
 
-字段含义：
+Field descriptions:
 
-- `pathParams`：路径参数，例如 `/lookup/id/shop/{shopId}/v1` 里的 `shopId`
-- `query`：查询参数
-- `headers`：请求头（如 `ITAD-Profile`）
-- `body`：请求体（对象或数组）
-- `oauthToken`：OAuth token（仅 OAuth 接口需要；也可用环境变量）
+- `pathParams`: Path parameters, e.g. `shopId` in `/lookup/id/shop/{shopId}/v1`
+- `query`: Query string parameters
+- `headers`: Request headers (e.g. `ITAD-Profile`)
+- `body`: Request body (object or array)
+- `oauthToken`: OAuth token (OAuth endpoints only; can also be set via environment variable)
 
-> 说明：按接口需要填写，不需要的字段可以省略。
+> Only populate the fields required by the endpoint — unused fields can be omitted.
 
 ---
 
-## 2. 鉴权规则
+## 2. Authentication Rules
 
-- `auth = key`：必须有 API Key（自动从环境变量注入 `key` 查询参数）
-- `auth = optional_key`：可选 API Key（有则自动注入）
-- `auth = oauth`：必须有 OAuth token（优先 `oauthToken` 入参，其次环境变量）
-- `auth = none`：无需鉴权
+- `auth = key`: API Key required (injected automatically as `key` query param from env var)
+- `auth = optional_key`: Optional API Key (injected if present)
+- `auth = oauth`: OAuth token required (`oauthToken` param takes priority, then env var)
+- `auth = none`: No authentication required
 
-API Key 环境变量（任一）：
+API Key environment variables (any one):
 
-- `ITAD_API_KEY`（推荐）
+- `ITAD_API_KEY` (recommended)
 - `ISTHEREANYDEAL_API_KEY`
 - `APIKEY`
 - `apikey`
 
-OAuth 环境变量（任一）：
+OAuth environment variables (any one):
 
 - `ITAD_OAUTH_TOKEN`
 - `ISTHEREANYDEAL_OAUTH_TOKEN`
 
 ---
 
-## 3. 返回与错误格式
+## 3. Response and Error Format
 
-成功时，MCP 返回：
+On success, MCP returns:
 
 ```json
 {
   "content": [
-    { "type": "text", "text": "JSON字符串" }
+    { "type": "text", "text": "<JSON string>" }
   ]
 }
 ```
 
-失败时，MCP 返回：
+On failure, MCP returns:
 
 ```json
 {
   "isError": true,
   "content": [
-    { "type": "text", "text": "错误信息" }
+    { "type": "text", "text": "<error message>" }
   ]
 }
 ```
 
 ---
 
-## 4. 典型调用示例
+## 4. Example Calls
 
-### 4.1 查询慈善包/Bundle 内游戏（你提到的场景）
+### 4.1 Query Bundles Containing a Game
 
 tool: `games_bundles_v2`  
 endpoint: `GET /games/bundles/v2`  
-鉴权：`key`  
-必填：`query.id`
+auth: `key`  
+required: `query.id`
 
 ```json
 {
@@ -93,12 +93,12 @@ endpoint: `GET /games/bundles/v2`
 }
 ```
 
-### 4.2 搜索游戏
+### 4.2 Search for a Game
 
 tool: `games_search_v1`  
 endpoint: `GET /games/search/v1`  
-鉴权：`key`  
-必填：`query.title`
+auth: `key`  
+required: `query.title`
 
 ```json
 {
@@ -109,12 +109,12 @@ endpoint: `GET /games/search/v1`
 }
 ```
 
-### 4.3 查询价格（批量）
+### 4.3 Batch Price Query
 
 tool: `games_prices_v3`  
 endpoint: `POST /games/prices/v3`  
-鉴权：`key`  
-必填：`body`
+auth: `key`  
+required: `body`
 
 ```json
 {
@@ -130,12 +130,12 @@ endpoint: `POST /games/prices/v3`
 }
 ```
 
-### 4.4 Shop ID 反查（带 path 参数）
+### 4.4 Reverse Shop ID Lookup (with path parameter)
 
 tool: `lookup_gid_shopid_v1`  
 endpoint: `POST /lookup/id/shop/{shopId}/v1`  
-鉴权：`optional_key`  
-必填：`pathParams.shopId`、`body`
+auth: `optional_key`  
+required: `pathParams.shopId`, `body`
 
 ```json
 {
@@ -149,11 +149,11 @@ endpoint: `POST /lookup/id/shop/{shopId}/v1`
 }
 ```
 
-### 4.5 OAuth 接口示例（获取用户信息）
+### 4.5 OAuth Endpoint Example (Get User Info)
 
 tool: `user_info_v2`  
 endpoint: `GET /user/info/v2`  
-鉴权：`oauth`
+auth: `oauth`
 
 ```json
 {
@@ -161,12 +161,12 @@ endpoint: `GET /user/info/v2`
 }
 ```
 
-### 4.6 查询游戏信息（`games_info_v2`）
+### 4.6 Query Game Info (`games_info_v2`)
 
 tool: `games_info_v2`  
 endpoint: `GET /games/info/v2`  
-鉴权：`key`  
-必填：`query.id`
+auth: `key`  
+required: `query.id`
 
 ```json
 {
@@ -176,15 +176,15 @@ endpoint: `GET /games/info/v2`
 }
 ```
 
-> 注意：`games_info_v2` 的 `query.id` 仅支持单个字符串，不支持数组。批量场景请逐条调用。
+> Note: `games_info_v2` `query.id` only supports a single string, not an array. For multiple games, call it once per ID.
 
 ---
 
-## 5. 全量工具分组与必填参数
+## 5. Full Tool List with Required Parameters
 
-### Games / Deals / Lookup / Service / Stats / Internal（主要 API Key）
+### Games / Deals / Lookup / Service / Stats / Internal (API Key)
 
-| tool | method | path | auth | 必填 |
+| tool | method | path | auth | required |
 |---|---|---|---|---|
 | `deals_v2` | GET | `/deals/v2` | key | - |
 | `games_bundles_v2` | GET | `/games/bundles/v2` | key | query:`id` |
@@ -214,9 +214,9 @@ endpoint: `GET /games/info/v2`
 | `internal_twitchstream_v1` | GET | `/internal/twitch/stream/v1` | key | query:`channel` |
 | `internal_wsgf_v1` | GET | `/internal/wsgf/v1` | key | query:`appid` |
 
-### Collection / Waitlist / Notes / Notifications / Profiles / User（OAuth）
+### Collection / Waitlist / Notes / Notifications / Profiles / User (OAuth)
 
-| tool | method | path | auth | 必填 |
+| tool | method | path | auth | required |
 |---|---|---|---|---|
 | `collection_copies_v1_delete` | DELETE | `/collection/copies/v1` | oauth | body |
 | `collection_copies_v1_get` | GET | `/collection/copies/v1` | oauth | - |
@@ -247,10 +247,10 @@ endpoint: `GET /games/info/v2`
 
 ---
 
-## 6. 常见报错说明
+## 6. Common Errors
 
-- `缺少必填 query/path/header 参数`：按文档补齐对应字段
-- `需要 body`：该接口必须传请求体
-- `需要 API Key`：设置 `ITAD_API_KEY` 等环境变量
-- `需要 OAuth Token`：传入 `oauthToken` 或设置 OAuth 环境变量
-- `ITAD API 请求失败 (4xx/5xx)`：上游接口错误或参数不合法，查看返回文本
+- `missing required query/path/header parameter`: Supply the missing field per the docs above
+- `requires a request body`: This endpoint must receive a body
+- `requires an API Key`: Set `ITAD_API_KEY` or one of the other API key env vars
+- `requires an OAuth Token`: Pass `oauthToken` or set an OAuth env var
+- `ITAD API request failed (4xx/5xx)`: Upstream error or invalid parameters — check the response text
