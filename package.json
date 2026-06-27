@@ -1,11 +1,11 @@
 {
-  "name": "isthereanydeal-mcp",
+  "name": "itad-mcp",
   "version": "0.1.0",
   "description": "MCP server for IsThereAnyDeal API",
   "type": "module",
   "main": "src/index.js",
   "bin": {
-    "isthereanydeal-mcp": "./src/index.js"
+    "itad-mcp": "./src/index.js"
   },
   "scripts": {
     "start": "node src/index.js",

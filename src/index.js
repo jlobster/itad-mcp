@@ -453,7 +453,7 @@ function buildCallingGuideMarkdown(metadata) {
 }
 
 const server = new McpServer({
-  name: "isthereanydeal-mcp",
+  name: "itad-mcp",
   version: "0.2.0",
 });
 

@@ -1,4 +1,4 @@
-# isthereanydeal-mcp
+# itad-mcp
 
 An MCP (Model Context Protocol) server for the IsThereAnyDeal API.
 
@@ -96,7 +96,7 @@ The server communicates with MCP clients over stdio.
   "mcpServers": {
     "isthereanydeal": {
       "command": "node",
-      "args": ["/path/to/isthereanydeal-mcp/src/index.js"],
+      "args": ["/path/to/itad-mcp/src/index.js"],
       "env": {
         "ITAD_API_KEY": "your_api_key",
         "ITAD_OAUTH_TOKEN": "your_oauth_token"
