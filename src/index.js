@@ -4,12 +4,18 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { request as httpRequest } from "node:http";
 import { request as httpsRequest } from "node:https";
 import { z } from "zod";
+import { config as dotenvConfig } from "dotenv";
+import { fileURLToPath } from "node:url";
+import { dirname, join } from "node:path";
+
+dotenvConfig({ path: join(dirname(fileURLToPath(import.meta.url)), "..", ".env") });
 
 const ITAD_BASE_URL = "https://api.isthereanydeal.com";
 const API_KEY_ENV_NAMES = ["ITAD_API_KEY", "ISTHEREANYDEAL_API_KEY", "APIKEY", "apikey"];
 const OAUTH_TOKEN_ENV_NAMES = ["ITAD_OAUTH_TOKEN", "ISTHEREANYDEAL_OAUTH_TOKEN"];
 
 const ENDPOINTS = [
+  { tool: "bundles_v1", method: "GET", path: "/bundles/v1", summary: "Bundle List", auth: "key" },
   { tool: "collection_copies_v1_delete", method: "DELETE", path: "/collection/copies/v1", summary: "Delete Copies", auth: "oauth" },
   { tool: "collection_copies_v1_get", method: "GET", path: "/collection/copies/v1", summary: "List Copies", auth: "oauth" },
   { tool: "collection_copies_v1_patch", method: "PATCH", path: "/collection/copies/v1", summary: "Update Copies", auth: "oauth" },
@@ -21,6 +27,7 @@ const ENDPOINTS = [
   { tool: "collection_groups_v1_get", method: "GET", path: "/collection/groups/v1", summary: "Get all Categories", auth: "oauth" },
   { tool: "collection_groups_v1_patch", method: "PATCH", path: "/collection/groups/v1", summary: "Update Categories", auth: "oauth" },
   { tool: "collection_groups_v1_post", method: "POST", path: "/collection/groups/v1", summary: "Create new Category", auth: "oauth" },
+  { tool: "deals_post_v2", method: "POST", path: "/deals/v2", summary: "Deals List", auth: "key" },
   { tool: "deals_v2", method: "GET", path: "/deals/v2", summary: "Deals List", auth: "key" },
   { tool: "games_bundles_v2", method: "GET", path: "/games/bundles/v2", summary: "Bundles including Game", auth: "key" },
   { tool: "games_history_v2", method: "GET", path: "/games/history/v2", summary: "History log", auth: "key" },
@@ -43,6 +50,9 @@ const ENDPOINTS = [
   { tool: "lookup_gid_shopid_v1", method: "POST", path: "/lookup/id/shop/{shopId}/v1", summary: "Lookup ITAD game IDs by IDs on shop", auth: "optional_key" },
   { tool: "lookup_gid_title_v1", method: "POST", path: "/lookup/id/title/v1", summary: "Lookup ITAD game IDs by title", auth: "optional_key" },
   { tool: "lookup_shopid_gid_v1", method: "POST", path: "/lookup/shop/{shopId}/id/v1", summary: "Lookup game IDs on shop by ITAD game IDs", auth: "optional_key" },
+  { tool: "ignored_games_v1_delete", method: "DELETE", path: "/ignored/games/v1", summary: "Delete from Ignore List", auth: "oauth" },
+  { tool: "ignored_games_v1_get", method: "GET", path: "/ignored/games/v1", summary: "Games in Ignore List", auth: "oauth" },
+  { tool: "ignored_games_v1_put", method: "PUT", path: "/ignored/games/v1", summary: "Add to Ignore List", auth: "oauth" },
   { tool: "notifications_list_v1_get", method: "GET", path: "/notifications/v1", summary: "List notifications", auth: "oauth" },
   { tool: "notifications_read_all_v1_put", method: "PUT", path: "/notifications/read/all/v1", summary: "Mark all notifications read", auth: "oauth" },
   { tool: "notifications_read_v1_put", method: "PUT", path: "/notifications/read/v1", summary: "Mark notification read", auth: "oauth" },
@@ -51,11 +61,14 @@ const ENDPOINTS = [
   { tool: "profiles_link_v1_put", method: "PUT", path: "/profiles/link/v1", summary: "Link profile", auth: "oauth" },
   { tool: "profiles_sync_collection_v1_put", method: "PUT", path: "/profiles/sync/collection/v1", summary: "Sync Collection", auth: "oauth" },
   { tool: "profiles_sync_waitlist_v1_put", method: "PUT", path: "/profiles/sync/waitlist/v1", summary: "Sync Waitlist", auth: "oauth" },
-  { tool: "service_shops_v1", method: "GET", path: "/service/shops/v1", summary: "Get Shops", auth: "none" },
+  { tool: "service_shops_map_v1", method: "GET", path: "/service/shops/map/v1", summary: "Shop Map", auth: "none" },
+  { tool: "service_shops_v1", method: "GET", path: "/service/shops/v1", summary: "Active Shops", auth: "none" },
   { tool: "stats_most_collected_v1", method: "GET", path: "/stats/most-collected/v1", summary: "Most Collected", auth: "key" },
   { tool: "stats_most_popular_v1", method: "GET", path: "/stats/most-popular/v1", summary: "Most Popular", auth: "key" },
   { tool: "stats_most_waitlisted_v1", method: "GET", path: "/stats/most-waitlisted/v1", summary: "Most Waitlisted", auth: "key" },
   { tool: "stats_waitlist_v1", method: "GET", path: "/stats/waitlist/v1", summary: "Waitlist Stats", auth: "key" },
+  { tool: "unstable_games_dots_v1", method: "GET", path: "/unstable/games/dots/v1", summary: "Game Changes", auth: "key" },
+  { tool: "unstable_games_list_v1", method: "GET", path: "/unstable/games/list/v1", summary: "Game List", auth: "key" },
   { tool: "user_info_v2", method: "GET", path: "/user/info/v2", summary: "User Info", auth: "oauth" },
   { tool: "user_notes_v1_delete", method: "DELETE", path: "/user/notes/v1", summary: "Delete notes", auth: "oauth" },
   { tool: "user_notes_v1_get", method: "GET", path: "/user/notes/v1", summary: "Get notes", auth: "oauth" },
@@ -63,6 +76,8 @@ const ENDPOINTS = [
   { tool: "waitlist_games_v1_delete", method: "DELETE", path: "/waitlist/games/v1", summary: "Delete from Waitlist", auth: "oauth" },
   { tool: "waitlist_games_v1_get", method: "GET", path: "/waitlist/games/v1", summary: "Games in Waitlist", auth: "oauth" },
   { tool: "waitlist_games_v1_put", method: "PUT", path: "/waitlist/games/v1", summary: "Add to Waitlist", auth: "oauth" },
+  { tool: "webhooks_add_v1", method: "PUT", path: "/webhooks/v1", summary: "Add webhook", auth: "oauth" },
+  { tool: "webhooks_delete_v1", method: "DELETE", path: "/webhooks/v1", summary: "Remove webhook", auth: "oauth" },
 ];
 
 const REQUIRED_QUERY_PARAMS = {
@@ -92,6 +107,7 @@ const REQUIRED_PATH_PARAMS = {
 };
 
 const BODY_REQUIRED_TOOLS = new Set([
+  "deals_post_v2",
   "collection_copies_v1_delete",
   "collection_copies_v1_patch",
   "collection_copies_v1_post",
@@ -105,6 +121,8 @@ const BODY_REQUIRED_TOOLS = new Set([
   "games_prices_v3",
   "games_storelow_v2",
   "games_subscriptions_v1",
+  "ignored_games_v1_delete",
+  "ignored_games_v1_put",
   "internal_exfgls_v1",
   "lookup_gid_shopid_v1",
   "lookup_gid_title_v1",
@@ -116,6 +134,8 @@ const BODY_REQUIRED_TOOLS = new Set([
   "user_notes_v1_put",
   "waitlist_games_v1_delete",
   "waitlist_games_v1_put",
+  "webhooks_add_v1",
+  "webhooks_delete_v1",
 ]);
 
 const primitiveValueSchema = z.union([z.string(), z.number(), z.boolean()]);
@@ -412,7 +432,7 @@ function buildCallingGuideMarkdown(metadata) {
   const lines = [
     "# IsThereAnyDeal MCP Calling Guide",
     "",
-    "This server maps each ITAD OpenAPI operation to a dedicated MCP tool (53 total). No generic API call tool is provided.",
+    "This server maps each ITAD OpenAPI operation to a dedicated MCP tool (63 total). No generic API call tool is provided.",
     "",
     "## Unified Input Fields",
     "- pathParams: path parameter object",
@@ -484,7 +504,7 @@ server.registerResource(
   "itad://endpoints/index.json",
   {
     title: "ITAD MCP Endpoint Index",
-    description: "Machine-readable metadata for all 53 MCP tools",
+    description: "Machine-readable metadata for all 63 MCP tools",
     mimeType: "application/json",
   },
   async () => ({

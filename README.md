@@ -42,35 +42,49 @@ The server also exposes two MCP Resources so agents that can't read repository f
 ## Installation
 
 ```bash
+git clone https://github.com/jlobster/itad-mcp.git
+cd itad-mcp
 npm install
+pwd   # copy this path — you'll need it for the MCP client config
 ```
 
 ## Credentials
 
+### Creating an app on IsThereAnyDeal
+
+Both the API key and OAuth client ID come from the same app registration at <https://isthereanydeal.com/apps/my/>.
+
+When creating the app:
+
+- **App Name** — required; any name you like (e.g. `itad-mcp`)
+- **Description** — optional
+- **OAuth — app type** — select **"This app will NOT store OAuth secret securely"** (the implicit grant flow used here delivers the token directly in the redirect URL; no client secret exchange is needed)
+- **Redirect URI** — set to `http://localhost`
+
+After saving, the page shows your **Client ID** (used in the OAuth authorization URL below) and an **API Key**.
+
 ### API Key (price/deal endpoints)
 
-Most read-only endpoints (prices, deals, search, game info) require an API key.
-
-Get one at <https://isthereanydeal.com/apps/my/> — create an app and copy the key.
+Most read-only endpoints (prices, deals, search, game info) require an API key. Copy the API Key shown on your app's page.
 
 ### OAuth Token (account endpoints)
 
 Endpoints that access your account — waitlist, collection, notes, notifications — require an OAuth token. The flow:
 
-1. Go to <https://isthereanydeal.com/apps/my/> and create an app (or use the same one).
-2. Set the redirect URI to something you control (e.g. `http://localhost`).
-3. Send users (or yourself) to the ITAD authorization URL:
+1. Create an app at <https://isthereanydeal.com/apps/my/> as described above (or use an existing one).
+2. Open this URL in your browser, substituting your Client ID:
    ```
-   https://isthereanydeal.com/oauth/authorize/?client_id=YOUR_CLIENT_ID&response_type=token&scope=waitlist_read+waitlist_write+collection_read+collection_write+notes_read+notes_write&redirect_uri=YOUR_REDIRECT_URI
+   https://isthereanydeal.com/oauth/authorize/?client_id=YOUR_CLIENT_ID&response_type=token&scope=waitlist_read+waitlist_write+collection_read+collection_write+notes_read+notes_write&redirect_uri=http://localhost
    ```
-4. After authorizing, ITAD redirects to your URI with `#access_token=...` in the URL fragment. Copy that token.
+3. Authorize the app. ITAD redirects to `http://localhost` — the page won't load, but the access token is in the URL bar after `#access_token=`. Copy that token.
 
 ### Setting credentials via .env
 
 Copy `.env.example` to `.env` and fill in your values:
 
 ```bash
-cp .env.example .env
+cp .env.example .env   # macOS / Linux
+copy .env.example .env  # Windows
 ```
 
 `.env`:
@@ -79,7 +93,17 @@ ITAD_API_KEY=your_isthereanydeal_api_key
 ITAD_OAUTH_TOKEN=your_oauth_token
 ```
 
-The server reads these at startup. `ITAD_OAUTH_TOKEN` is only needed if you use account endpoints.
+The server loads this file automatically — no credentials needed in your MCP client config. `ITAD_OAUTH_TOKEN` is only needed if you use account endpoints.
+
+Restrict the file to your user account only:
+
+```bash
+# macOS / Linux
+chmod 600 .env
+
+# Windows (PowerShell)
+icacls .env /inheritance:r /grant:r "${env:USERNAME}:(R)"
+```
 
 ## Starting the Server
 
@@ -96,17 +120,13 @@ The server communicates with MCP clients over stdio.
   "mcpServers": {
     "isthereanydeal": {
       "command": "node",
-      "args": ["/path/to/itad-mcp/src/index.js"],
-      "env": {
-        "ITAD_API_KEY": "your_api_key",
-        "ITAD_OAUTH_TOKEN": "your_oauth_token"
-      }
+      "args": ["/path/to/itad-mcp/src/index.js"]
     }
   }
 }
 ```
 
-`ITAD_OAUTH_TOKEN` is only required for account endpoints (waitlist, collection, notes, notifications). Omit it if you only need price and deal data.
+The server loads credentials from the `.env` file in the project root automatically — no `env` block needed. If you prefer to set credentials as OS-level user environment variables instead of a `.env` file, those work too and take precedence.
 
 ## Full Tool List (53 tools)
 
